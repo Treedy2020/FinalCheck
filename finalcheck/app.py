@@ -121,7 +121,7 @@ def main():
 
                     with st.spinner("Processing file..."):
                         # Process file based on type
-                        if file_type == "PDF Document":
+                        if file_type == "PDF":
                             images = process_pdf(uploaded_file)
                             st.success(
                                 f"✅ Successfully extracted {len(images)} pages from the PDF."
