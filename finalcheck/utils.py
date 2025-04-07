@@ -7,55 +7,37 @@ import openai
 from PIL import Image
 
 # Predefined check criteria (based on the image in the prompt)
+NAME_MAP = {
+    "uniform_law_labels": "Uniform Law Labels",
+    "california_flammability": "California Flammability Notice",
+    "labelling_review": "Labelling Review (Standard For The Flammability Of Upholstered Furniture – 16 CFR Part 1640)",
+    "flammability_test": "Flammability Test (16 CFR Part 1631)",
+}
 
 CHECK_CRITERIA = {
-    "uniform_law_labels": {
-        "description": """Verify if the document contains proper Uniform Law Labels, should basically include the following basic information:
-        1. Information about filling materials used in the product,
-        2. Manufacturer information,
-        3. Warning text (e.g., "DO NOT REMOVE THIS TAG"),
-        4. Material composition percentages,
-        5. Registration number (REG. NO.)""",
-    },
-    "california_flammability": {
-        "description": """Verify if the document contains proper California Flammability Notice (TB117), should basically include the following basic information:
-        1. Product's flammability performance,
-        2. Use of flame retardant chemicals (if any),
-        3. Product safety statement,
-        4. California compliance declaration""",
-    },
-    "labelling_review": {
-        "description": """Verify compliance with Labelling Review (16 CFR Part 1640), should basically include the following basic information:
-        1. Flammability labeling requirements for upholstered furniture
-        2. Compliance information that must be included on the label
-        3. Compliance with U.S. Consumer Product Safety Commission (CPSC) requirements
-        4. Applies to furniture products with filling materials, excluding bedding
-        5. Exemption provisions for thinner products (< 0.5 inches)
+    "Uniform Law Labels": {
+        "description": """  Law label, need to check,  presence of
+            1. Last 4 digits of JAN code
+            2. RN
+            3. Date of Delivery
         """,
+        "standard_name": "uniform_law_labels",
     },
-    "flammability_test": {
-        "description": """Check compliance with Flammability Test standards (16 CFR Part 1631)，should basically include the following basic information:
-        1. Basic Identification
-            - Product name and model
-            - Manufacturer information
-            - Flammability test date
-        2. Test Results
-            - Clear indication of pass/fail status
-            - Compliance with 16 CFR Part 1631 test method
-            - Test result validity period
-        3. Warning Information
-            - Special notice if no flame retardants used
-            - Safety precautions
-            - Required warning symbols
-        4. Compliance Declaration
-            - CPSC compliance statement
-            - Product category indication
-            - Certification number (if applicable)
-        5. Label Requirements
-            - Clearly legible
-            - Durable materials
-            - Securely attached to product
+    "California Flammability Notice": {
+        "description": """California Flammability Notice, need to check, the “X” is placed in correct option.""",
+        "standard_name": "california_flammability",
+    },
+    "Labelling Review (Standard For The Flammability Of Upholstered Furniture – 16 CFR Part 1640)": {
+        "description": """Check compliance with Labelling Review (16 CFR Part 1640). Specifically, check the presence of the following sentences:
+        <COMPLIES WITH U.S. CPSC REQUIREMENTS FOR UPHOLSTERED FURNITURE FLAMMABILITY>, if the label contains this sentence, then the product is compliant with the standard.
         """,
+        "standard_name": "labelling_review",
+    },
+    "Flammability Test (16 CFR Part 1631)": {
+        "description": """Check compliance with Flammability Test standards (16 CFR Part 1631). Specifically, check the presence of the following sentences:
+        <FLAMMABLE (FAILS U.S. DEPARTMENT OF COMMERCE STANDARD FF 2-70): SHOULD NOT BE USED NEAR SOURCES OF IGNITION.>, if the label contains this sentence, then the product is compliant with the standard.
+        """,
+        "standard_name": "flammability_test",
     },
 }
 
@@ -80,7 +62,7 @@ def create_structured_prompt(selected_checks: List[str]) -> str:
     for check in selected_checks:
         if check in CHECK_CRITERIA:
             criteria = CHECK_CRITERIA[check]
-            prompt += f"- {check}: {criteria['description']}\n"
+            prompt += f"- {criteria['standard_name']}: {criteria['description']}\n"
 
     prompt += "\nFor each standard, respond in JSON format with these fields:\n"
     prompt += "1. standard_name: Name of the standard\n"
@@ -115,14 +97,10 @@ def analyze_page_with_vision_api(
     detail: Literal["low", "high"] = "high",
 ) -> Dict[str, Any]:
     """Analyze a single page with the OpenAI Vision API"""
-    print(selected_checks)
     # Prepare the image
     img_b64 = prepare_image_for_api(image)
-
-    # Create the structured prompt
     prompt = create_structured_prompt(selected_checks)
 
-    # Call the OpenAI API
     response = openai.chat.completions.create(
         model="gpt-4o",
         messages=[

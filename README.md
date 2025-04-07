@@ -63,3 +63,6 @@ streamlit run run.py
 ## License
 
 MIT
+
+## TODO
+- [x] Change the check box of front page.
